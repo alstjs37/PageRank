@@ -116,7 +116,17 @@ int print_graph_info(Graph graph) {
     return 0;
 }
 
-int main() {
+vector<pair<int, double>> sortResult(unordered_map<int, double> nodeScores) {
+   
+    vector<pair<int, double>> sortedScores(nodeScores.begin(), nodeScores.end());
+    sort(sortedScores.begin(), sortedScores.end(), [](const auto& a, const auto& b) -> bool {
+        return a.second > b.second;
+    });
+
+    return sortedScores;
+}
+
+int main(int argc, char *argv[]) {
 
     string filename = "./graph_data/facebook_combined.txt";
 
@@ -138,14 +148,11 @@ int main() {
     auto duration = duration_cast<microseconds>(stop - start);
 
     // sort result
-    vector<pair<int, double>> sortedScores(nodeScores.begin(), nodeScores.end());
-    sort(sortedScores.begin(), sortedScores.end(), [](const auto& a, const auto& b) -> bool {
-        return a.second > b.second;
-    });
+    vector<pair<int, double>> sortedScores = sortResult(nodeScores);
 
     cout << endl;
     // print top 5 pagerank value
-    cout << "Top 5 PageRank Scores:" << endl;
+    cout << "[ Top 5 PageRank Scores ]" << endl;
     int count = 0;
     for (const auto& pair : sortedScores) {
         cout << "Node " << pair.first << ": " << pair.second << endl;
