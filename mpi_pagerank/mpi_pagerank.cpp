@@ -105,7 +105,7 @@ Graph readGraphFromFile(const string& filename) {
     return graph;
 }
 
-int print_graph_info(Graph graph) {
+int printGraphInfo(Graph graph) {
 
     int numNodes = graph.getNumNodes();
     int numEdges = graph.getNumEdges();
@@ -116,12 +116,38 @@ int print_graph_info(Graph graph) {
     return 0;
 }
 
-int main() {
+vector<pair<int, double>> sortResult(unordered_map<int, double> nodeScores) {
+   
+    vector<pair<int, double>> sortedScores(nodeScores.begin(), nodeScores.end());
+    sort(sortedScores.begin(), sortedScores.end(), [](const auto& a, const auto& b) -> bool {
+        return a.second > b.second;
+    });
 
-    string filename = "../graph_data/facebook_combined.txt";
+    return sortedScores;
+}
+
+int printTopFiveRank(vector<pair<int, double>> sortedScores) {
+    
+    cout << "[ Top 5 PageRank Scores ]" << endl;
+    
+    int count = 0;
+    for (const auto& pair : sortedScores) {
+        cout << "Node " << pair.first << ": " << pair.second << endl;
+        count++;
+        if (count == 5) {
+            break;
+        }
+    }
+
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+
+    string filename = "./graph_data/facebook_combined.txt";
 
     Graph graph = readGraphFromFile(filename);
-    print_graph_info(graph);
+    printGraphInfo(graph);
 
     // Pagerank Algorithm parameter
     double tolerance = 0.00001;
@@ -135,27 +161,18 @@ int main() {
 
     // end time
     auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start);
+    auto duration = duration_cast<seconds>(stop - start);
 
     // sort result
-    vector<pair<int, double>> sortedScores(nodeScores.begin(), nodeScores.end());
-    sort(sortedScores.begin(), sortedScores.end(), [](const auto& a, const auto& b) -> bool {
-        return a.second > b.second;
-    });
+    vector<pair<int, double>> sortedScores = sortResult(nodeScores);
 
     cout << endl;
+
     // print top 5 pagerank value
-    cout << "Top 5 PageRank Scores:" << endl;
-    int count = 0;
-    for (const auto& pair : sortedScores) {
-        cout << "Node " << pair.first << ": " << pair.second << endl;
-        count++;
-        if (count == 5) {
-            break;
-        }
-    }
-    // print Calculate time -> microseconds
-    cout << "PageRank calculation time: " << duration.count() << " microseconds" << endl;
+    printTopFiveRank(sortedScores);
+    
+    // print Calculate time -> seconds
+    cout << "PageRank calculation time: " << duration.count() << " seconds" << endl;
 
     return 0;
 }
