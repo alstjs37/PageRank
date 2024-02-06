@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 
     // end time
     auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(stop - start);
+    auto duration = duration_cast<seconds>(stop - start);
 
     // sort result
     vector<pair<int, double>> sortedScores = sortResult(nodeScores);
@@ -171,8 +171,8 @@ int main(int argc, char *argv[]) {
     // print top 5 pagerank value
     printTopFiveRank(sortedScores);
     
-    // print Calculate time -> microseconds
-    cout << "PageRank calculation time: " << duration.count() << " microseconds" << endl;
+    // print Calculate time -> seconds
+    cout << "PageRank calculation time: " << duration.count() << " seconds" << endl;
 
     return 0;
 }
