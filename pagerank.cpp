@@ -107,7 +107,7 @@ Graph readGraphFromFile(const string& filename) {
 
 int main() {
 
-    string filename = "../graph_data/facebook_combined.txt";
+    string filename = "./graph_data/facebook_combined.txt";
 
     Graph graph = readGraphFromFile(filename);
 
