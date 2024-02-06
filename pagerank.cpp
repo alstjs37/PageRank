@@ -126,6 +126,22 @@ vector<pair<int, double>> sortResult(unordered_map<int, double> nodeScores) {
     return sortedScores;
 }
 
+int printTopFiveRank(vector<pair<int, double>> sortedScores) {
+    
+    cout << "[ Top 5 PageRank Scores ]" << endl;
+    
+    int count = 0;
+    for (const auto& pair : sortedScores) {
+        cout << "Node " << pair.first << ": " << pair.second << endl;
+        count++;
+        if (count == 5) {
+            break;
+        }
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
 
     string filename = "./graph_data/facebook_combined.txt";
@@ -151,16 +167,10 @@ int main(int argc, char *argv[]) {
     vector<pair<int, double>> sortedScores = sortResult(nodeScores);
 
     cout << endl;
+
     // print top 5 pagerank value
-    cout << "[ Top 5 PageRank Scores ]" << endl;
-    int count = 0;
-    for (const auto& pair : sortedScores) {
-        cout << "Node " << pair.first << ": " << pair.second << endl;
-        count++;
-        if (count == 5) {
-            break;
-        }
-    }
+    printTopFiveRank(sortedScores);
+    
     // print Calculate time -> microseconds
     cout << "PageRank calculation time: " << duration.count() << " microseconds" << endl;
 
