@@ -105,17 +105,23 @@ Graph readGraphFromFile(const string& filename) {
     return graph;
 }
 
-int main() {
-
-    string filename = "./graph_data/facebook_combined.txt";
-
-    Graph graph = readGraphFromFile(filename);
+int print_graph_info(Graph graph) {
 
     int numNodes = graph.getNumNodes();
     int numEdges = graph.getNumEdges();
 
     cout << "Number of nodes: " << numNodes << endl;
     cout << "Number of edges: " << numEdges << endl;
+
+    return 0;
+}
+
+int main() {
+
+    string filename = "./graph_data/facebook_combined.txt";
+
+    Graph graph = readGraphFromFile(filename);
+    print_graph_info(graph);
 
     // Pagerank Algorithm parameter
     double tolerance = 0.00001;
