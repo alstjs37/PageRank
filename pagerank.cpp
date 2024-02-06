@@ -105,7 +105,7 @@ Graph readGraphFromFile(const string& filename) {
     return graph;
 }
 
-int print_graph_info(Graph graph) {
+int printGraphInfo(Graph graph) {
 
     int numNodes = graph.getNumNodes();
     int numEdges = graph.getNumEdges();
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     string filename = "./graph_data/facebook_combined.txt";
 
     Graph graph = readGraphFromFile(filename);
-    print_graph_info(graph);
+    printGraphInfo(graph);
 
     // Pagerank Algorithm parameter
     double tolerance = 0.00001;
