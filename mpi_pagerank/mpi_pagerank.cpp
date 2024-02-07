@@ -7,9 +7,16 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <mpi.h>
 
 using namespace std;
 using namespace chrono;
+
+int ROOT = 0;
+
+// Pagerank Algorithm parameter
+double tolerance = 0.00001;
+double dampingFactor = 0.85;
 
 struct Edge {
     int src;
@@ -143,15 +150,16 @@ int printTopFiveRank(vector<pair<int, double>> sortedScores) {
 }
 
 int main(int argc, char *argv[]) {
+    // MPI initialize
+    int rank, comm_size;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
     string filename = "./graph_data/facebook_combined.txt";
 
     Graph graph = readGraphFromFile(filename);
     printGraphInfo(graph);
-
-    // Pagerank Algorithm parameter
-    double tolerance = 0.00001;
-    double dampingFactor = 0.85;
 
     // start time
     auto start = high_resolution_clock::now();
@@ -163,6 +171,10 @@ int main(int argc, char *argv[]) {
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stop - start);
 
+
+
+
+    /////////////////// 결과 정리 부분
     // sort result
     vector<pair<int, double>> sortedScores = sortResult(nodeScores);
 
