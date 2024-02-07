@@ -1,178 +1,219 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <omp.h>
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <vector>
-#include <unordered_set>
-#include <unordered_map>
-#include <cmath>
+#include <string>
+#include <fstream>
+#include <math.h>
 #include <algorithm>
-#include <chrono>
 
 using namespace std;
-using namespace chrono;
 
-struct Edge {
-    int src;
-    int dest;
-};
+#define df 0.85
 
-class Graph {
-public:
-    vector<Edge> edges;
+vector<vector<size_t>> graph;
+vector<int> num_outgoing;
+vector<double> pr;
+vector<double> new_pr;
+vector<double> gather_pr;
+vector<double> test;
 
-    void addEdge(int src, int dest) {
-        edges.push_back({src, dest});
+int start;
+int end2;
+int num_of_vertex;
+
+template <class Vector, class T>
+
+bool insert_into_vector(Vector& v, const T& t){
+    typename Vector::iterator i = lower_bound(v.begin(), v.end(), t);
+
+    if (i == v.end() || t < *i) {
+        v.insert(i, t);
+        return true;
+    } else {
+        return false;
     }
-
-    int getNumNodes() const {
-        unordered_set<int> nodes;
-        for (const Edge& edge : edges) {
-            nodes.insert(edge.src);
-            nodes.insert(edge.dest);
-        }
-        return nodes.size();
-    }
-
-    int getNumEdges() const {
-        return edges.size();
-    }
-
-    unordered_map<int, double> pageRank(double tolerance, double dampingFactor) {
-        unordered_map<int, double> nodeScores;
-
-        int numNodes = getNumNodes();
-
-        // initialize pagerank value
-        for (int node = 0; node < numNodes; ++node) {
-            nodeScores[node] = 1.0 / numNodes;
-        }
-
-        double diff;
-        int iteration = 0;
-
-        do {
-            unordered_map<int, double> newScores;
-
-            // Calculate pagerank
-            for (const Edge& edge : edges) {
-                newScores[edge.dest] += (1.0 - dampingFactor) * (nodeScores[edge.src] / getOutDegree(edge.src));
-            }
-
-            // Calculate diff with before value
-            diff = 0.0;
-            for (int node = 0; node < numNodes; ++node) {
-                diff += abs(newScores[node] - nodeScores[node]);
-            }
-
-            nodeScores = newScores;
-            ++iteration;
-
-            // print calculate step
-            cout << "Calculate: " << iteration << " step" << endl;
-        } while (diff > tolerance);
-
-        cout << "Converged after " << iteration << " iterations." << endl;
-
-        return nodeScores;
-    }
-
-private:
-    int getOutDegree(int node) const {
-        int outDegree = 0;
-        for (const Edge& edge : edges) {
-            if (edge.src == node) {
-                ++outDegree;
-            }
-        }
-        return outDegree;
-    }
-};
-
-Graph readGraphFromFile(const string& filename) {
-    ifstream file(filename);
-    if (!file.is_open()) {
-        cerr << "Error: Unable to open file " << filename << endl;
-        exit(EXIT_FAILURE);
-    }
-
-    Graph graph;
-    int src, dest;
-    while (file >> src >> dest) {
-        graph.addEdge(src, dest);
-    }
-
-    file.close();
-    return graph;
 }
 
-int printGraphInfo(Graph graph) {
+bool add_arc(size_t from, size_t to){
+    vector<size_t> v;
+    bool ret = false;
+    size_t max_dim = max(from, to);
 
-    int numNodes = graph.getNumNodes();
-    int numEdges = graph.getNumEdges();
+    if (graph.size() <= max_dim) {
+        max_dim = max_dim + 1;
+        
+        graph.resize(max_dim);
+        if (num_outgoing.size() <= max_dim) {
+            num_outgoing.resize(max_dim, 0);
+        }
+    }
 
-    cout << "Number of nodes: " << numNodes << endl;
-    cout << "Number of edges: " << numEdges << endl;
+    ret = insert_into_vector(graph[to], from);
 
-    return 0;
+    if (ret) {
+        num_outgoing[from]++;
+    }
+
+    return ret;
 }
 
-vector<pair<int, double>> sortResult(unordered_map<int, double> nodeScores) {
+void create_graph_data(string file_path, string delimiter){
+    
+    istream *infile;
+
+    infile = new ifstream(file_path.c_str());
+    size_t line_num = 0;
+    string line;
    
-    vector<pair<int, double>> sortedScores(nodeScores.begin(), nodeScores.end());
-    sort(sortedScores.begin(), sortedScores.end(), [](const auto& a, const auto& b) -> bool {
-        return a.second > b.second;
-    });
+   if(infile){
+        while(getline(*infile, line)) {
+            string from, to;
+            size_t pos;
 
-    return sortedScores;
+            if(delimiter == " ")
+                pos = line.find(" ");
+            else if(delimiter == "\t")
+                pos = line.find("\t");
+            else
+                cout << "[ERROR] Input delimiter \" \" or \"t \" to execute program " << endl; 
+
+            from = line.substr(0, pos);
+            to = line.substr(pos+1);
+
+            // strtol -> string to int(long)
+            add_arc(strtol(from.c_str(), NULL, 10), strtol(to.c_str(), NULL, 10));
+            line_num++;
+            
+            if(line_num % 500000 == 0)
+                cerr << "Create " << line_num << " lines" << endl;
+      }
+   } 
+    else {
+        cout << "[ERROR] Unable to open file" <<endl;
+        exit(1);
+   }
+
+    //add_arc(239822,0);
+    num_of_vertex = graph.size();
+    cerr << "[ Create " << line_num << " lines, " << num_of_vertex << " vertices graph. ]" << endl;
+    
+    delete infile;
 }
 
-int printTopFiveRank(vector<pair<int, double>> sortedScores) {
+int main(int argc, char* argv[]) {
+    double sendbuf;
+    double recvbuf_sum;
+    struct timespec begin, end1 ;
+    struct timespec begin1, end3 ;
     
-    cout << "[ Top 5 PageRank Scores ]" << endl;
+    // Create graph data;
+    string file_path = argv[1];
+    create_graph_data(file_path, argv[2]);
+ 
+    cerr << "--------------------------------------------" << endl;
     
-    int count = 0;
-    for (const auto& pair : sortedScores) {
-        cout << "Node " << pair.first << ": " << pair.second << endl;
-        count++;
-        if (count == 5) {
+    new_pr.resize(num_of_vertex, 0);
+    new_pr[0] = 1;
+    gather_pr.resize(num_of_vertex, 1/num_of_vertex);
+
+    double dangling_pr = 0;
+    double diff = 1;
+    double tmp=0;
+    
+    double inv_num_of_vertex = 1.0 / num_of_vertex;
+    double df_inv = 1.0 - df;
+
+    double* recv_buffer_ptr = gather_pr.data();    
+    double* send_buffer_ptr = new_pr.data();
+    const vector<vector<size_t>>& graph1 = graph;
+    const vector<int>& num_outgoing1 = num_outgoing;
+    
+    printf("progressing...\n");
+    clock_gettime(CLOCK_MONOTONIC, &begin1);
+    for(int step = 0; step< 10000000;step++){
+        tmp = 0;
+        
+        dangling_pr = 0;
+        //clock_gettime(CLOCK_MONOTONIC, &begin);
+        if(step!=0){
+            diff = 0;
+            for (size_t i=0;i<num_of_vertex;i++) {
+                if (num_outgoing[i] == 0)
+                    dangling_pr += gather_pr[i];   
+            }
+        }
+            
+     
+        
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+        
+        for(size_t i=0;i<num_of_vertex;i++){
+            tmp = 0.0;
+            const size_t graph_size = graph1[i].size();
+            const size_t* graph_ptr = graph1[i].data();
+            
+            for(size_t j=0; j<graph_size; j++){
+                const size_t from_page = graph_ptr[j];
+                const double inv_num_outgoing = 1.0 / num_outgoing1[from_page];
+
+                tmp += recv_buffer_ptr[from_page]*inv_num_outgoing;
+            }
+            send_buffer_ptr[i] = (tmp+ dangling_pr*inv_num_of_vertex)*df + df_inv*inv_num_of_vertex;
+            diff += fabs(new_pr[i]-gather_pr[i]);
+           
+        }
+        
+        clock_gettime(CLOCK_MONOTONIC, &end1);
+        long double time1 = (end1.tv_sec - begin.tv_sec) + (end1.tv_nsec - begin.tv_nsec) / 1000000000.0;
+        printf("calc 수행시간: %Lfs.\n", time1);
+
+       
+        cout << "---------" << step+1 <<"step---------" << endl;
+        cout << diff << endl;
+
+        gather_pr = new_pr;
+        
+        if(diff < 0.00001){
             break;
         }
+        
     }
-
-    return 0;
-}
-
-int main(int argc, char *argv[]) {
-
-    string filename = "./graph_data/facebook_combined.txt";
-
-    Graph graph = readGraphFromFile(filename);
-    printGraphInfo(graph);
-
-    // Pagerank Algorithm parameter
-    double tolerance = 0.00001;
-    double dampingFactor = 0.85;
-
-    // start time
-    auto start = high_resolution_clock::now();
-
-    // pagerank function
-    unordered_map<int, double> nodeScores = graph.pageRank(tolerance, dampingFactor);
-
-    // end time
-    auto stop = high_resolution_clock::now();
-    auto duration = duration_cast<seconds>(stop - start);
-
-    // sort result
-    vector<pair<int, double>> sortedScores = sortResult(nodeScores);
-
-    cout << endl;
-
-    // print top 5 pagerank value
-    printTopFiveRank(sortedScores);
+    clock_gettime(CLOCK_MONOTONIC, &end3);
     
-    // print Calculate time -> seconds
-    cout << "PageRank calculation time: " << duration.count() << " seconds" << endl;
+    
+    
+        size_t i;
+        double sum = 0;
+        cout.precision(numeric_limits<double>::digits10);
+         for(i=num_of_vertex - 34;i<num_of_vertex;i++){
+            cout << "pr[" <<i<<"]: " << gather_pr[i] <<endl;
+        }
+        for(i=0;i<num_of_vertex;i++){
+            sum += gather_pr[i];
+        }
+        cout << "s = " <<round(sum) << endl;
+        printf("Done.\n");
+    
+        int important = 0;
+        string result = "";
+        double important_pr = gather_pr[0];
+        double tmp1 = important_pr;
+        for (int i=0;i< num_of_vertex;i++){
+            important_pr = max(important_pr, gather_pr[i]);
+            if(tmp1 != important_pr){
+                important = i;
+                tmp1 = important_pr;
+            }
+        }
 
-    return 0;
+        cout << "important page is " << important << " and value is " << tmp1 << endl;
+
+        long double time = (end3.tv_sec - begin1.tv_sec) + (end3.tv_nsec - begin1.tv_nsec) / 1000000000.0;
+        printf("수행시간: %Lfs.\n", time);
+
+
 }
