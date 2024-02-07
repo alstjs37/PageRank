@@ -93,7 +93,7 @@ void create_graph_data(string file_path, string delimiter){
       }
    } 
     else {
-        cout << "[ERROR] Unable to open file" <<endl;
+        cerr << "[ERROR] Unable to open file" <<endl;
         exit(1);
    }
 
@@ -122,37 +122,40 @@ int main(int argc, char* argv[]) {
 
     double dangling_pr = 0;
     double diff = 1;
-    double tmp=0;
+    double tmp = 0;
     
     double inv_num_of_vertex = 1.0 / num_of_vertex;
     double df_inv = 1.0 - df;
 
     double* recv_buffer_ptr = gather_pr.data();    
     double* send_buffer_ptr = new_pr.data();
+
+    // vector<vector<size_t>> graph;
     const vector<vector<size_t>>& graph1 = graph;
     const vector<int>& num_outgoing1 = num_outgoing;
     
-    printf("progressing...\n");
+    cout << "progressing... " << endl;
+
     clock_gettime(CLOCK_MONOTONIC, &begin1);
-    for(int step = 0; step< 10000000;step++){
+    for(int step = 0; step < 10000000; step++){
         tmp = 0;
         
         dangling_pr = 0;
-        //clock_gettime(CLOCK_MONOTONIC, &begin);
+    
         if(step!=0){
             diff = 0;
-            for (size_t i=0;i<num_of_vertex;i++) {
+            for (size_t i = 0; i < num_of_vertex; i++) {
+                // outgoing edge가 없으면 
                 if (num_outgoing[i] == 0)
                     dangling_pr += gather_pr[i];   
             }
         }
-            
-     
-        
+               
         clock_gettime(CLOCK_MONOTONIC, &begin);
         
-        for(size_t i=0;i<num_of_vertex;i++){
+        for(size_t i = 0; i < num_of_vertex; i++){
             tmp = 0.0;
+            
             const size_t graph_size = graph1[i].size();
             const size_t* graph_ptr = graph1[i].data();
             
