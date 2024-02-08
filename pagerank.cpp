@@ -100,15 +100,14 @@ void create_graph_data(string file_path, string delimiter){
     //add_arc(239822,0);
     num_of_vertex = graph.size();
     cerr << "[ Create " << line_num << " lines, " << num_of_vertex << " vertices graph. ]" << endl;
-    
     delete infile;
 }
 
 int main(int argc, char* argv[]) {
     double sendbuf;
     double recvbuf_sum;
-    struct timespec begin, end1 ;
-    struct timespec begin1, end3 ;
+    struct timespec step_begin, step_end;
+    struct timespec total_begin, total_end;
     
     // Create graph data;
     string file_path = argv[1];
@@ -133,16 +132,15 @@ int main(int argc, char* argv[]) {
     // vector<vector<size_t>> graph;
     const vector<vector<size_t>>& graph1 = graph;
     const vector<int>& num_outgoing1 = num_outgoing;
-    
     cout << "progressing... " << endl;
 
-    clock_gettime(CLOCK_MONOTONIC, &begin1);
+    clock_gettime(CLOCK_MONOTONIC, &total_begin);
     for(int step = 0; step < 10000000; step++){
         tmp = 0;
         
         dangling_pr = 0;
     
-        if(step!=0){
+        if(step != 0){
             diff = 0;
             for (size_t i = 0; i < num_of_vertex; i++) {
                 // outgoing edge가 없으면 
@@ -151,27 +149,28 @@ int main(int argc, char* argv[]) {
             }
         }
                
-        clock_gettime(CLOCK_MONOTONIC, &begin);
+        clock_gettime(CLOCK_MONOTONIC, &step_begin);
         
         for(size_t i = 0; i < num_of_vertex; i++){
             tmp = 0.0;
-            
+
             const size_t graph_size = graph1[i].size();
             const size_t* graph_ptr = graph1[i].data();
             
-            for(size_t j=0; j<graph_size; j++){
+            for(size_t j = 0; j < graph_size; j++){
                 const size_t from_page = graph_ptr[j];
                 const double inv_num_outgoing = 1.0 / num_outgoing1[from_page];
-
-                tmp += recv_buffer_ptr[from_page]*inv_num_outgoing;
+                // recv_buffer_ptr = gather_pr
+                tmp += recv_buffer_ptr[from_page] * inv_num_outgoing;
             }
-            send_buffer_ptr[i] = (tmp+ dangling_pr*inv_num_of_vertex)*df + df_inv*inv_num_of_vertex;
-            diff += fabs(new_pr[i]-gather_pr[i]);
-           
+            // send_buffer_ptr = new_pr
+            send_buffer_ptr[i] = (tmp + (dangling_pr * inv_num_of_vertex)) * df + (df_inv * inv_num_of_vertex);
+            diff += fabs(new_pr[i] - gather_pr[i]);
         }
         
-        clock_gettime(CLOCK_MONOTONIC, &end1);
-        long double time1 = (end1.tv_sec - begin.tv_sec) + (end1.tv_nsec - begin.tv_nsec) / 1000000000.0;
+        clock_gettime(CLOCK_MONOTONIC, &step_end);
+
+        long double time1 = (step_end.tv_sec - step_begin.tv_sec) + ((step_end.tv_nsec - step_begin.tv_nsec) / 1000000000.0);
         printf("calc 수행시간: %Lfs.\n", time1);
 
        
@@ -185,38 +184,38 @@ int main(int argc, char* argv[]) {
         }
         
     }
-    clock_gettime(CLOCK_MONOTONIC, &end3);
+    clock_gettime(CLOCK_MONOTONIC, &total_end);
     
-    
-    
-        size_t i;
-        double sum = 0;
-        cout.precision(numeric_limits<double>::digits10);
-         for(i=num_of_vertex - 34;i<num_of_vertex;i++){
-            cout << "pr[" <<i<<"]: " << gather_pr[i] <<endl;
+    double sum = 0;
+    cout.precision(numeric_limits<double>::digits10);
+
+    for(size_t i = num_of_vertex - 34; i < num_of_vertex; i++) {
+        cout << "pr[" << i << "]: " << gather_pr[i] << endl;
+    }
+
+    for(size_t i = 0; i < num_of_vertex; i++) {
+        sum += gather_pr[i];
+    }
+
+    cout << "Sum of pagerank = " << round(sum) << endl;
+    cout << "Done. " << endl;
+
+    int important = 0;
+    string result = "";
+    double important_pr = gather_pr[0];
+    double tmp1 = important_pr;
+
+    // print max pagerank value
+    for (int i = 0; i < num_of_vertex; i++){
+        important_pr = max(important_pr, gather_pr[i]);
+        if(tmp1 != important_pr){
+            important = i;
+            tmp1 = important_pr;
         }
-        for(i=0;i<num_of_vertex;i++){
-            sum += gather_pr[i];
-        }
-        cout << "s = " <<round(sum) << endl;
-        printf("Done.\n");
-    
-        int important = 0;
-        string result = "";
-        double important_pr = gather_pr[0];
-        double tmp1 = important_pr;
-        for (int i=0;i< num_of_vertex;i++){
-            important_pr = max(important_pr, gather_pr[i]);
-            if(tmp1 != important_pr){
-                important = i;
-                tmp1 = important_pr;
-            }
-        }
+    }
 
-        cout << "important page is " << important << " and value is " << tmp1 << endl;
+    cout << "important page is " << important << " and value is " << tmp1 << endl;
 
-        long double time = (end3.tv_sec - begin1.tv_sec) + (end3.tv_nsec - begin1.tv_nsec) / 1000000000.0;
-        printf("수행시간: %Lfs.\n", time);
-
-
+    long double time = (total_end.tv_sec - total_begin.tv_sec) + (total_end.tv_nsec - total_begin.tv_nsec) / 1000000000.0;
+    printf("수행시간: %Lfs.\n", time);
 }

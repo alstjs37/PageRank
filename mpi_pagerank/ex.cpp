@@ -142,6 +142,8 @@ int main(int argc, char *argv[]) {
         vector<Edge> edgeData(numEdges);
         for (int i = 0; i < numEdges; ++i) {
             edgeData[i] = graph.edges[i];
+
+            
         }
 
         MPI_Scatterv(edgeData.data(), numEdgesPerProcess.data(), displacements.data(), MPI_INT, edgeData.data(), numEdgesPerProcess[rank], MPI_INT, ROOT, MPI_COMM_WORLD);
