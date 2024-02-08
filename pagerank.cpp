@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
         printf("calc 수행시간: %Lfs.\n", time1);
 
        
-        cout << "---------" << step+1 <<"step---------" << endl;
+        cout << "--------- " << step+1 <<" step ---------" << endl;
         cout << diff << endl;
 
         gather_pr = new_pr;
@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
     double sum = 0;
     cout.precision(numeric_limits<double>::digits10);
 
-    for(size_t i = num_of_vertex - 34; i < num_of_vertex; i++) {
+    for(size_t i = num_of_vertex - 20; i < num_of_vertex; i++) {
         cout << "pr[" << i << "]: " << gather_pr[i] << endl;
     }
 
